@@ -642,9 +642,12 @@
     <!-- Sessão Atual -->
     <div class="section-card" id="sessao-panel" style="display:none">
       <h3>🎯 Sessão Ativa</h3>
-      <div class="codigo-display">
-        <div class="label">Código de acesso para os alunos:</div>
-        <div class="codigo" id="sessao-codigo">------</div>
+      <div style="background:#F0FFF4;border:2px solid #52B788;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.5rem;">🔑</span>
+        <div>
+          <div style="font-size:0.8rem;color:#276749;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Código de acesso dos alunos</div>
+          <div style="font-size:1.8rem;font-weight:900;color:#276749;letter-spacing:6px;">0707</div>
+        </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success btn-sm" onclick="iniciarSessao()" id="btn-iniciar">▶ Iniciar Quiz</button>
@@ -961,52 +964,55 @@ function gerarCodigo() {
 }
 
 async function criarSessao() {
-  const codigo = gerarCodigo();
+  // Verificar se já existe sessão ativa
   try {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'criar_sessao_direto',
-        nome: 'Sessão Quiz',
-        codigo_acesso: codigo
-      })
+    const check = await fetch('https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz', {
+      headers: { 'x-service-role': 'true' }
     });
-    // Salvamos localmente pois a criação é feita via entity direto
-    state.sessao = { codigo_acesso: codigo, status: 'aguardando', pergunta_atual: 0, id: 'local_' + Date.now() };
-
-    // Criar via API base44 entities
-    const resp = await criarSessaoEntidade(codigo);
-    if (resp && resp.id) {
-      state.sessao = resp;
+    const sessoes = await check.json();
+    const ativa = Array.isArray(sessoes) ? sessoes.find(s => s.status === 'em_andamento' || s.status === 'aguardando') : null;
+    if (ativa) {
+      // Reaproveitar sessão existente
+      state.sessao = ativa;
+      document.getElementById('sessao-panel').style.display = 'block';
+      document.getElementById('sessao-status-badge').textContent = ativa.status === 'em_andamento' ? '🟢 Em andamento' : '🟡 Aguardando início';
+      document.getElementById('sessao-status-badge').className = ativa.status === 'em_andamento' ? 'badge badge-success' : 'badge badge-warning';
+      if (ativa.status === 'em_andamento') {
+        document.getElementById('btn-iniciar').style.display = 'none';
+        document.getElementById('btn-pausar').style.display = 'inline-flex';
+      }
+      startProfessorPoll();
+      return;
     }
+  } catch(e) {}
 
-    document.getElementById('sessao-codigo').textContent = codigo;
-    document.getElementById('sessao-panel').style.display = 'block';
-    document.getElementById('sessao-status-badge').textContent = '🟡 Aguardando início';
-    document.getElementById('sessao-status-badge').className = 'badge badge-warning';
-    playSound('start');
-    alert('Sessão criada! Código: ' + codigo + '\nCompartilhe este código com seus alunos.');
-  } catch(e) {
-    alert('Erro ao criar sessão: ' + e.message);
-  }
-}
-
-async function criarSessaoEntidade(codigo) {
+  // Criar nova sessão com código fixo 0707
   try {
     const r = await fetch('https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
       body: JSON.stringify({
         nome: 'Sessão Quiz',
-        codigo_acesso: codigo,
+        codigo_acesso: '0707',
         status: 'aguardando',
         pergunta_atual: 0,
         tempo_por_pergunta: 30
       })
     });
-    return await r.json();
-  } catch(e) { return null; }
+    const sessao = await r.json();
+    if (!sessao || !sessao.id) return alert('Erro ao criar sessão. Tente novamente.');
+
+    state.sessao = sessao;
+    document.getElementById('sessao-panel').style.display = 'block';
+    document.getElementById('sessao-status-badge').textContent = '🟡 Aguardando início';
+    document.getElementById('sessao-status-badge').className = 'badge badge-warning';
+    document.getElementById('btn-iniciar').style.display = 'inline-flex';
+    document.getElementById('btn-pausar').style.display = 'none';
+    playSound('start');
+    startProfessorPoll();
+  } catch(e) {
+    alert('Erro ao criar sessão: ' + e.message);
+  }
 }
 
 async function iniciarSessao() {
