@@ -696,6 +696,10 @@
       <label>Seu Nome</label>
       <input type="text" id="aluno-nome" placeholder="Como você se chama?" maxlength="40" onkeydown="if(event.key==='Enter')entrarQuiz()">
     </div>
+    <div class="input-group" style="margin-top:12px;">
+      <label>Código do seu professor</label>
+      <input type="text" id="aluno-codigo-prof" placeholder="Ex: 0707" maxlength="10" style="letter-spacing:4px;font-size:1.1rem;text-align:center;" onkeydown="if(event.key==='Enter')entrarQuiz()">
+    </div>
     <div id="aluno-error" class="error-msg"></div>
     <button class="btn btn-secondary mt-16" onclick="entrarQuiz()">🚀 Entrar no Quiz</button>
     <button class="btn btn-outline mt-8" onclick="showScreen('screen-home')">← Voltar</button>
@@ -1227,9 +1231,11 @@ const CODIGO_ALUNO = '0707';
 
 async function entrarQuiz() {
   const nome = document.getElementById('aluno-nome').value.trim();
+  const codigo = document.getElementById('aluno-codigo-prof').value.trim();
   const err = document.getElementById('aluno-error');
 
   if (!nome) return err.textContent = '⚠️ Digite seu nome!';
+  if (!codigo) return err.textContent = '⚠️ Digite o código do professor!';
   err.textContent = '';
 
   try {
@@ -1237,7 +1243,7 @@ async function entrarQuiz() {
     const res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'entrar_sessao', nome_participante: nome, codigo_sessao: '0707' })
+      body: JSON.stringify({ action: 'entrar_sessao', nome_participante: nome, codigo_sessao: codigo })
     });
     const data = await res.json();
 
