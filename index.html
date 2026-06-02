@@ -964,15 +964,18 @@ function gerarCodigo() {
 }
 
 async function criarSessao() {
-  // Verificar se já existe sessão ativa
   try {
-    const check = await fetch('https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz', {
-      headers: { 'x-service-role': 'true' }
+    // Primeiro verificar se já existe sessão ativa
+    const checkRes = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'buscar_sessao_ativa' })
     });
-    const sessoes = await check.json();
-    const ativa = Array.isArray(sessoes) ? sessoes.find(s => s.status === 'em_andamento' || s.status === 'aguardando') : null;
-    if (ativa) {
+    const checkData = await checkRes.json();
+
+    if (checkData.ok && checkData.sessao) {
       // Reaproveitar sessão existente
+      const ativa = checkData.sessao;
       state.sessao = ativa;
       document.getElementById('sessao-panel').style.display = 'block';
       document.getElementById('sessao-status-badge').textContent = ativa.status === 'em_andamento' ? '🟢 Em andamento' : '🟡 Aguardando início';
@@ -980,29 +983,24 @@ async function criarSessao() {
       if (ativa.status === 'em_andamento') {
         document.getElementById('btn-iniciar').style.display = 'none';
         document.getElementById('btn-pausar').style.display = 'inline-flex';
+      } else {
+        document.getElementById('btn-iniciar').style.display = 'inline-flex';
+        document.getElementById('btn-pausar').style.display = 'none';
       }
       startProfessorPoll();
       return;
     }
-  } catch(e) {}
 
-  // Criar nova sessão com código fixo 0707
-  try {
-    const r = await fetch('https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz', {
+    // Criar nova sessão via backend
+    const res = await fetch(API_BASE, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
-      body: JSON.stringify({
-        nome: 'Sessão Quiz',
-        codigo_acesso: '0707',
-        status: 'aguardando',
-        pergunta_atual: 0,
-        tempo_por_pergunta: 30
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'criar_sessao' })
     });
-    const sessao = await r.json();
-    if (!sessao || !sessao.id) return alert('Erro ao criar sessão. Tente novamente.');
+    const data = await res.json();
+    if (!data.ok || !data.sessao) return alert('Erro ao criar sessão. Tente novamente.');
 
-    state.sessao = sessao;
+    state.sessao = data.sessao;
     document.getElementById('sessao-panel').style.display = 'block';
     document.getElementById('sessao-status-badge').textContent = '🟡 Aguardando início';
     document.getElementById('sessao-status-badge').className = 'badge badge-warning';
@@ -1049,10 +1047,10 @@ async function encerrarSessao() {
 async function atualizarSessao(dados) {
   if (!state.sessao || !state.sessao.id) return;
   try {
-    await fetch(`https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz/${state.sessao.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
-      body: JSON.stringify(dados)
+    await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'atualizar_sessao', sessao_id: state.sessao.id, dados })
     });
   } catch(e) {}
 }
@@ -1079,13 +1077,15 @@ async function exibirPerguntaEspecifica(numero) {
     item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Buscar pergunta
+  // Buscar pergunta via backend
   try {
-    const resp = await fetch('https://superagent-ec768a92.base44.app/api/entities/Pergunta?numero=' + numero, {
-      headers: { 'x-service-role': 'true' }
+    const resp = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'buscar_pergunta', numero })
     });
     const data = await resp.json();
-    const pergunta = Array.isArray(data) ? data.find(p => p.numero == numero) : data;
+    const pergunta = data.pergunta || null;
 
     if (!pergunta) return alert('Pergunta não encontrada.');
 
@@ -1151,10 +1151,13 @@ function startProfessorPoll() {
 async function atualizarDashboard() {
   if (!state.sessao || !state.sessao.id) return;
   try {
-    const resp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante?sessao_id=${state.sessao.id}`, {
-      headers: { 'x-service-role': 'true' }
+    const resp = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'listar_participantes', sessao_id: state.sessao.id })
     });
-    const participantes = await resp.json();
+    const json = await resp.json();
+    const participantes = json.participantes || [];
     const list = document.getElementById('participantes-list');
     const ind = document.getElementById('update-indicator');
     const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1242,45 +1245,20 @@ async function entrarQuiz() {
   err.textContent = '';
 
   try {
-    // Buscar sessão ativa (em_andamento ou aguardando)
-    const resp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz`, {
-      headers: { 'x-service-role': 'true' }
+    // Entrar via backend (valida código e cria participante)
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'entrar_sessao', nome_participante: nome, codigo_sessao: codigo })
     });
-    const sessoes = await resp.json();
-    const sessaoAtiva = Array.isArray(sessoes)
-      ? sessoes.find(s => s.status === 'em_andamento' || s.status === 'aguardando')
-      : null;
+    const data = await res.json();
 
-    if (!sessaoAtiva) {
-      return err.textContent = '⏳ Nenhuma sessão ativa no momento. Aguarde o professor iniciar!';
+    if (!res.ok || data.error) {
+      return err.textContent = '❌ ' + (data.error || 'Erro ao entrar.');
     }
 
-    // Criar ou buscar participante
-    const partResp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante`, {
-      headers: { 'x-service-role': 'true' }
-    });
-    const participantes = await partResp.json();
-    const jaExiste = Array.isArray(participantes)
-      ? participantes.find(p => p.nome.toLowerCase() === nome.toLowerCase() && p.sessao_id === sessaoAtiva.id)
-      : null;
-
-    let participante = jaExiste;
-    if (!participante) {
-      const criarResp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
-        body: JSON.stringify({
-          nome: nome,
-          sessao_id: sessaoAtiva.id,
-          codigo_sessao: sessaoAtiva.codigo_acesso || '0707',
-          pontuacao: 0,
-          respostas_corretas: 0,
-          total_respondidas: 0,
-          status: 'ativo'
-        })
-      });
-      participante = await criarResp.json();
-    }
+    const sessaoAtiva = data.sessao;
+    const participante = data.participante;
 
     state.sessao = sessaoAtiva;
     state.participante = participante;
@@ -1344,13 +1322,13 @@ async function carregarPerguntaAluno(perguntaRef) {
   try {
     // perguntaRef pode ser ID ou número
     const isNum = !isNaN(parseInt(perguntaRef));
-    const url = isNum
-      ? `https://superagent-ec768a92.base44.app/api/entities/Pergunta?numero=${perguntaRef}`
-      : `https://superagent-ec768a92.base44.app/api/entities/Pergunta/${perguntaRef}`;
-
-    const resp = await fetch(url, { headers: { 'x-service-role': 'true' } });
+    const resp = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'buscar_pergunta', numero: isNum ? parseInt(perguntaRef) : perguntaRef })
+    });
     const data = await resp.json();
-    const pergunta = Array.isArray(data) ? data[0] : data;
+    const pergunta = data.pergunta || null;
 
     if (!pergunta || !pergunta.id) return;
 
