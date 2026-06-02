@@ -1089,7 +1089,7 @@ async function exibirPerguntaEspecifica(numero) {
     state.perguntaIndex = numero;
 
     // Atualizar sessão com pergunta atual
-    await atualizarSessao({ pergunta_atual: pergunta.id || numero });
+    await atualizarSessao({ pergunta_atual: pergunta.numero || numero });
 
     // Preview
     document.getElementById('preview-card').style.display = 'block';
@@ -1297,28 +1297,26 @@ async function verificarSessaoAluno() {
       return;
     }
 
-    if (sessao.status === 'em_andamento' && sessao.pergunta_atual && sessao.pergunta_atual !== ultimaPerguntaId) {
-      ultimaPerguntaId = sessao.pergunta_atual;
-      await carregarPerguntaAluno(sessao.pergunta_atual);
-    }
-
-    if (sessao.status === 'em_andamento' && document.getElementById('screen-aguardando').classList.contains('active')) {
-      // Só muda de tela se tiver pergunta
-      if (sessao.pergunta_atual) {
-        await carregarPerguntaAluno(sessao.pergunta_atual);
-      }
+    const numPergunta = parseInt(sessao.pergunta_atual) || 0;
+    if (sessao.status === 'em_andamento' && numPergunta > 0 && numPergunta !== ultimaPerguntaId) {
+      ultimaPerguntaId = numPergunta;
+      await carregarPerguntaAluno(numPergunta);
+    } else if (sessao.status === 'em_andamento' && numPergunta > 0 &&
+               document.getElementById('screen-aguardando').classList.contains('active')) {
+      ultimaPerguntaId = numPergunta;
+      await carregarPerguntaAluno(numPergunta);
     }
   } catch(e) {}
 }
 
 async function carregarPerguntaAluno(perguntaRef) {
   try {
-    // perguntaRef pode ser ID ou número
-    const isNum = !isNaN(parseInt(perguntaRef));
+    const numero = parseInt(perguntaRef);
+    if (!numero || isNaN(numero)) return;
     const resp = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'buscar_pergunta', numero: isNum ? parseInt(perguntaRef) : perguntaRef })
+      body: JSON.stringify({ action: 'buscar_pergunta', numero })
     });
     const data = await resp.json();
     const pergunta = data.pergunta || null;
