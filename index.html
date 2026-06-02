@@ -642,13 +642,7 @@
     <!-- Sessão Atual -->
     <div class="section-card" id="sessao-panel" style="display:none">
       <h3>🎯 Sessão Ativa</h3>
-      <div style="background:#F0FFF4;border:2px solid #52B788;border-radius:12px;padding:14px 18px;margin-bottom:14px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:1.5rem;">🔑</span>
-        <div>
-          <div style="font-size:0.8rem;color:#276749;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Código de acesso dos alunos</div>
-          <div style="font-size:1.8rem;font-weight:900;color:#276749;letter-spacing:6px;">0707</div>
-        </div>
-      </div>
+
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn btn-success btn-sm" onclick="iniciarSessao()" id="btn-iniciar">▶ Iniciar Quiz</button>
         <button class="btn btn-warning btn-sm" onclick="pausarSessao()" id="btn-pausar" style="display:none">⏸ Pausar</button>
@@ -711,10 +705,11 @@
 <!-- ===== SCREEN: AGUARDANDO PROFESSOR ===== -->
 <div class="screen" id="screen-aguardando">
   <div class="waiting">
-    <div class="waiting-anim">⏳</div>
-    <h2>Aguardando o professor</h2>
+    <div class="waiting-anim">🎓</div>
+    <h2>Você está dentro!</h2>
     <p style="color:var(--muted);margin-top:8px;" id="waiting-nome"></p>
-    <p style="color:var(--muted);font-size:0.9rem;margin-top:16px;" class="connecting-dots">Conectando</p>
+    <p style="color:var(--muted);font-size:0.9rem;margin-top:16px;" class="connecting-dots">Aguardando o professor iniciar a pergunta</p>
+    <div id="waiting-status" style="margin-top:16px;padding:10px 20px;background:rgba(99,102,241,0.1);border-radius:12px;font-size:0.85rem;color:#6366F1;font-weight:700;"></div>
   </div>
 </div>
 
@@ -1260,7 +1255,7 @@ async function entrarQuiz() {
     state.respostasCorretas = participante.respostas_corretas || 0;
     state.totalRespondidas = participante.total_respondidas || 0;
 
-    document.getElementById('waiting-nome').textContent = 'Olá, ' + nome + '! Aguardando o professor...';
+    document.getElementById('waiting-nome').textContent = 'Olá, ' + nome + '! Aguardando o professor iniciar o quiz...';
     showScreen('screen-aguardando');
     playSound('entrar');
     startAlunoPoll();
@@ -1278,17 +1273,35 @@ function startAlunoPoll() {
 }
 
 async function verificarSessaoAluno() {
-  if (!state.sessao || !state.sessao.id) return;
   try {
+    // Sempre buscar a sessão mais atual pelo código fixo
     const res = await fetch(API_BASE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'status_sessao', sessao_id: state.sessao.id })
+      body: JSON.stringify({ action: 'buscar_sessao_ativa' })
     });
     const data = await res.json();
-    if (!data.ok) return;
+
+    if (!data.ok || !data.sessao) return;
 
     const sessao = data.sessao;
+
+    // Atualizar referência da sessão se mudou
+    if (!state.sessao || state.sessao.id !== sessao.id) {
+      state.sessao = sessao;
+      // Se participante entrou em sessão diferente, re-registrar
+      if (state.alunoNome) {
+        try {
+          const re = await fetch(API_BASE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'entrar_sessao', nome_participante: state.alunoNome, codigo_sessao: '0707' })
+          });
+          const rd = await re.json();
+          if (rd.ok && rd.participante) state.participante = rd.participante;
+        } catch(e) {}
+      }
+    }
     state.sessao = sessao;
 
     if (sessao.status === 'encerrada') {
@@ -1298,15 +1311,19 @@ async function verificarSessaoAluno() {
     }
 
     const numPergunta = parseInt(sessao.pergunta_atual) || 0;
-    if (sessao.status === 'em_andamento' && numPergunta > 0 && numPergunta !== ultimaPerguntaId) {
-      ultimaPerguntaId = numPergunta;
-      await carregarPerguntaAluno(numPergunta);
-    } else if (sessao.status === 'em_andamento' && numPergunta > 0 &&
-               document.getElementById('screen-aguardando').classList.contains('active')) {
-      ultimaPerguntaId = numPergunta;
-      await carregarPerguntaAluno(numPergunta);
+    const naTelaAguardando = document.getElementById('screen-aguardando').classList.contains('active');
+    const naTelaQuiz = document.getElementById('screen-quiz').classList.contains('active');
+
+    if (sessao.status === 'em_andamento' && numPergunta > 0) {
+      if (numPergunta !== ultimaPerguntaId) {
+        ultimaPerguntaId = numPergunta;
+        await carregarPerguntaAluno(numPergunta);
+      } else if (naTelaAguardando) {
+        // Sessão em andamento mas aluno ainda na tela de espera — forçar carregar
+        await carregarPerguntaAluno(numPergunta);
+      }
     }
-  } catch(e) {}
+  } catch(e) { console.error('Poll erro:', e); }
 }
 
 async function carregarPerguntaAluno(perguntaRef) {
