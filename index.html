@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superagente Quiz – Negócios em Informática</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+  :root {
+    --primary: #6C63FF;
+    --secondary: #48CAE4;
+    --success: #52B788;
+    --danger: #FF6B6B;
+    --warning: #FFD166;
+    --bg: #F0F4FF;
+    --card: #FFFFFF;
+    --text: #2D3748;
+    --muted: #718096;
+    --shadow: 0 8px 32px rgba(108,99,255,0.12);
+    --radius: 20px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ========== STARS BACKGROUND ========== */
+  .stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .star {
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--primary);
+    border-radius: 50%;
+    opacity: 0.15;
+    animation: twinkle 3s infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.05; transform: scale(1); }
+    100% { opacity: 0.3; transform: scale(1.5); }
+  }
+
+  /* ========== SCREENS ========== */
+  .screen {
+    display: none;
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+  }
+  .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ========== LOGO ========== */
+  .logo {
+    font-size: 2.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .logo-sub {
+    color: var(--muted);
+    font-size: 1rem;
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  /* ========== CARDS ========== */
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 32px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.4s ease;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .card h2 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  /* ========== INPUTS ========== */
+  .input-group { margin-bottom: 16px; }
+  .input-group label {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-group input:focus { border-color: var(--primary); }
+
+  /* ========== BUTTONS ========== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    letter-spacing: 0.3px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: linear-gradient(135deg, var(--primary), #8B80FF); color: white; }
+  .btn-secondary { background: linear-gradient(135deg, var(--secondary), #74D7F0); color: white; }
+  .btn-success { background: linear-gradient(135deg, var(--success), #76C893); color: white; }
+  .btn-danger { background: linear-gradient(135deg, var(--danger), #FF8E8E); color: white; }
+  .btn-warning { background: linear-gradient(135deg, var(--warning), #FFE066); color: #333; }
+  .btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+  .btn-sm { padding: 8px 16px; font-size: 0.85rem; width: auto; }
+
+  /* ========== HOME SCREEN ========== */
+  .home-buttons { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 400px; }
+  .home-btn {
+    padding: 24px;
+    border-radius: 20px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-weight: 800;
+    font-size: 1.1rem;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    text-align: left;
+    animation: bounceIn 0.5s ease;
+  }
+  .home-btn:hover { transform: scale(1.03); }
+  .home-btn .icon { font-size: 2rem; }
+  .home-btn .label { display: flex; flex-direction: column; }
+  .home-btn .label span { font-size: 0.85rem; font-weight: 600; opacity: 0.8; }
+  .home-btn-professor { background: linear-gradient(135deg, #6C63FF, #9B94FF); color: white; }
+  .home-btn-aluno { background: linear-gradient(135deg, #48CAE4, #74D7F0); color: white; box-shadow: var(--shadow); }
+
+  @keyframes bounceIn {
+    0% { transform: scale(0.8); opacity: 0; }
+    70% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* ========== PROFESSOR DASHBOARD ========== */
+  .dashboard {
+    width: 100%;
+    max-width: 900px;
+    padding: 20px;
+  }
+  .dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .dashboard-header h1 { font-size: 1.6rem; font-weight: 900; }
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+  .badge-success { background: #D4EDDA; color: #155724; }
+  .badge-warning { background: #FFF3CD; color: #856404; }
+  .badge-danger { background: #F8D7DA; color: #721C24; }
+  .badge-info { background: #D1ECF1; color: #0C5460; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .stat-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .stat-icon { font-size: 2rem; }
+  .stat-info .value { font-size: 1.8rem; font-weight: 900; color: var(--primary); }
+  .stat-info .label { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+
+  .section-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .section-card h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; }
+
+  /* ========== PERGUNTA PROFESSOR ========== */
+  .pergunta-list { display: flex; flex-direction: column; gap: 8px; max-height: 300px; overflow-y: auto; }
+  .pergunta-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    background: #F8F9FF;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+  .pergunta-item:hover { border-color: var(--primary); background: #EEF0FF; }
+  .pergunta-item.selected { border-color: var(--primary); background: #EEF0FF; }
+  .pergunta-num {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: white;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .pergunta-text { flex: 1; font-size: 0.9rem; font-weight: 600; }
+
+  /* ========== QUIZ ALUNO ========== */
+  .quiz-container {
+    width: 100%;
+    max-width: 680px;
+  }
+  .quiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .progress-bar {
+    flex: 1;
+    height: 10px;
+    background: #E2E8F0;
+    border-radius: 10px;
+    margin: 0 16px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+  }
+  .timer {
+    font-size: 1.5rem;
+    font-weight: 900;
+    color: var(--primary);
+    min-width: 50px;
+    text-align: center;
+  }
+  .timer.urgent { color: var(--danger); animation: pulse 0.5s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
+
+  .question-card {
+    background: white;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+  }
+  .question-num {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+  .question-text {
+    font-size: 1.25rem;
+    font-weight: 800;
+    line-height: 1.5;
+    color: var(--text);
+  }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+  .option-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 2px solid #E2E8F0;
+    border-radius: 16px;
+    background: white;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text);
+    text-align: left;
+    transition: all 0.2s;
+    animation: slideInLeft 0.3s ease;
+  }
+  .option-btn:nth-child(1) { animation-delay: 0.05s; }
+  .option-btn:nth-child(2) { animation-delay: 0.1s; }
+  .option-btn:nth-child(3) { animation-delay: 0.15s; }
+  .option-btn:nth-child(4) { animation-delay: 0.2s; }
+
+  @keyframes slideInLeft {
+    from { transform: translateX(-20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .option-btn:hover:not(:disabled) { border-color: var(--primary); background: #F0EEFF; transform: translateX(4px); }
+  .option-btn.correct { border-color: var(--success); background: #D4EDDA; color: #155724; animation: correctPulse 0.5s ease; }
+  .option-btn.wrong { border-color: var(--danger); background: #F8D7DA; color: #721C24; }
+  .option-btn:disabled { cursor: not-allowed; }
+
+  @keyframes correctPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+
+  .option-letter {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary), #9B94FF);
+    color: white;
+    font-weight: 900;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .option-btn.correct .option-letter { background: var(--success); }
+  .option-btn.wrong .option-letter { background: var(--danger); }
+
+  .feedback-box {
+    padding: 16px 20px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 1rem;
+    margin-top: 16px;
+    animation: fadeIn 0.3s ease;
+  }
+  .feedback-correct { background: #D4EDDA; color: #155724; border-left: 4px solid var(--success); }
+  .feedback-wrong { background: #F8D7DA; color: #721C24; border-left: 4px solid var(--danger); }
+
+  /* ========== RANKING ========== */
+  .ranking-list { display: flex; flex-direction: column; gap: 10px; }
+  .ranking-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 14px;
+    background: #F8F9FF;
+    animation: slideInRight 0.4s ease;
+  }
+  .ranking-item:nth-child(1) { background: linear-gradient(135deg, #FFF3CD, #FFE69C); }
+  .ranking-item:nth-child(2) { background: linear-gradient(135deg, #F0F0F0, #E0E0E0); }
+  .ranking-item:nth-child(3) { background: linear-gradient(135deg, #FFE4CC, #FFD1A3); }
+
+  @keyframes slideInRight {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .ranking-pos {
+    font-size: 1.3rem;
+    font-weight: 900;
+    min-width: 40px;
+    text-align: center;
+  }
+  .ranking-name { flex: 1; font-weight: 700; }
+  .ranking-score {
+    font-weight: 900;
+    font-size: 1.1rem;
+    color: var(--primary);
+  }
+
+  /* ========== AGUARDANDO ========== */
+  .waiting {
+    text-align: center;
+    padding: 40px;
+  }
+  .waiting-anim {
+    font-size: 4rem;
+    animation: bounce 1s infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+  }
+
+  /* ========== RESULTADO FINAL ========== */
+  .result-card {
+    background: white;
+    border-radius: 24px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    max-width: 480px;
+    width: 100%;
+  }
+  .result-trophy { font-size: 5rem; margin-bottom: 16px; animation: trophySpin 0.8s ease; }
+  @keyframes trophySpin {
+    0% { transform: rotate(-15deg) scale(0.5); opacity: 0; }
+    70% { transform: rotate(5deg) scale(1.1); }
+    100% { transform: rotate(0deg) scale(1); opacity: 1; }
+  }
+  .result-score { font-size: 3rem; font-weight: 900; color: var(--primary); }
+  .result-label { font-size: 1rem; color: var(--muted); font-weight: 600; margin-bottom: 24px; }
+
+  /* ========== FLOATING PARTICLES ========== */
+  .particles { position: fixed; pointer-events: none; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; }
+  .particle {
+    position: absolute;
+    font-size: 1.5rem;
+    animation: floatUp 2s ease-out forwards;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(-200px) rotate(360deg); opacity: 0; }
+  }
+
+  /* ========== MISC ========== */
+  .separator { height: 1px; background: #E2E8F0; margin: 16px 0; }
+  .text-center { text-align: center; }
+  .mt-8 { margin-top: 8px; }
+  .mt-16 { margin-top: 16px; }
+  .error-msg { color: var(--danger); font-weight: 700; font-size: 0.9rem; margin-top: 8px; text-align: center; }
+  .success-msg { color: var(--success); font-weight: 700; font-size: 0.9rem; margin-top: 8px; text-align: center; }
+
+  /* ========== SESSAO CODIGO ========== */
+  .codigo-display {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .codigo-display .codigo {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+  }
+  .codigo-display .label { font-size: 0.85rem; opacity: 0.9; font-weight: 600; }
+
+  /* ========== TELA CHEIA ========== */
+  .fullscreen-btn-float {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    background: rgba(108,99,255,0.85);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(108,99,255,0.4);
+    backdrop-filter: blur(4px);
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fullscreen-btn-float:hover { transform: scale(1.1); background: rgba(108,99,255,1); }
+
+  :fullscreen body, :-webkit-full-screen body, :-moz-full-screen body {
+    background: var(--bg);
+  }
+  :fullscreen .screen.active, :-webkit-full-screen .screen.active {
+    min-height: 100vh;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+  .switch-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary); }
+
+  .connecting-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- STARS BACKGROUND -->
+<div class="stars" id="stars"></div>
+
+<!-- FLOATING PARTICLES -->
+<div class="particles" id="particles"></div>
+
+<!-- ===== SCREEN: HOME ===== -->
+<div class="screen active" id="screen-home">
+  <div class="logo">🎯 Superagente Quiz</div>
+  <div class="logo-sub">Negócios em Informática</div>
+  <div id="som-btn-wrap" style="margin-bottom:16px;">
+    <button onclick="ativarAudio();document.getElementById('som-btn-wrap').innerHTML='<span style=\"color:#52B788;font-weight:700\">🔊 Sons ativados!</span>'" style="background:linear-gradient(135deg,#52B788,#76C893);color:white;border:none;padding:10px 22px;border-radius:12px;font-family:Nunito,sans-serif;font-weight:700;font-size:0.9rem;cursor:pointer;">🔊 Ativar Sons</button>
+  </div>
+  <div class="home-buttons">
+    <button class="home-btn home-btn-professor" onclick="goToProfessor()">
+      <span class="icon">👨‍🏫</span>
+      <div class="label">
+        <strong>Área do Professor</strong>
+        <span>Controle o quiz e veja resultados</span>
+      </div>
+    </button>
+    <button class="home-btn home-btn-aluno" onclick="showScreen('screen-aluno-login')">
+      <span class="icon">🎓</span>
+      <div class="label">
+        <strong>Entrar no Quiz</strong>
+        <span>Use o código do seu professor</span>
+      </div>
+    </button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: PROFESSOR LOGIN ===== -->
+<div class="screen" id="screen-prof-login">
+  <div class="logo">👨‍🏫 Professor</div>
+  <div class="card">
+    <h2>Acesso do Professor</h2>
+    <div class="input-group">
+      <label>Senha de Acesso</label>
+      <input type="password" id="prof-senha" placeholder="Digite sua senha" onkeydown="if(event.key==='Enter') loginProfessor()">
+    </div>
+    <div id="prof-login-error" class="error-msg"></div>
+    <button class="btn btn-primary mt-16" onclick="loginProfessor()">🔐 Entrar</button>
+    <button class="btn btn-outline mt-8" onclick="showScreen('screen-home')">← Voltar</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: PROFESSOR DASHBOARD ===== -->
+<div class="screen" id="screen-professor">
+  <div class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <h1>📊 Painel do Professor</h1>
+        <span id="sessao-status-badge" class="badge badge-warning">Sem sessão ativa</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-outline btn-sm" onclick="showScreen('screen-home')">🏠 Início</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleFullscreen()" id="btn-fullscreen">⛶ Tela Cheia</button>
+        <button class="btn btn-primary btn-sm" onclick="criarSessao()">+ Nova Sessão</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid-2">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-info">
+          <div class="value" id="stat-participantes">0</div>
+          <div class="label">Participantes</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">❓</div>
+        <div class="stat-info">
+          <div class="value" id="stat-perguntas">100</div>
+          <div class="label">Perguntas no banco</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessão Atual -->
+    <div class="section-card" id="sessao-panel" style="display:none">
+      <h3>🎯 Sessão Ativa</h3>
+      <div class="codigo-display">
+        <div class="label">Código de acesso para os alunos:</div>
+        <div class="codigo" id="sessao-codigo">------</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-success btn-sm" onclick="iniciarSessao()" id="btn-iniciar">▶ Iniciar Quiz</button>
+        <button class="btn btn-warning btn-sm" onclick="pausarSessao()" id="btn-pausar" style="display:none">⏸ Pausar</button>
+        <button class="btn btn-danger btn-sm" onclick="encerrarSessao()">⏹ Encerrar</button>
+        <button class="btn btn-outline btn-sm" onclick="verRanking()">🏆 Ranking</button>
+      </div>
+    </div>
+
+    <!-- Controle de Perguntas -->
+    <div class="section-card">
+      <h3>📋 Selecionar Pergunta para Exibir</h3>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input type="number" id="busca-pergunta" placeholder="Nº da pergunta" min="1" max="100"
+          style="padding:8px 12px;border:2px solid #E2E8F0;border-radius:10px;font-family:Nunito;font-weight:600;width:140px;">
+        <button class="btn btn-primary btn-sm" onclick="exibirPerguntaNumero()">Exibir</button>
+        <button class="btn btn-secondary btn-sm" onclick="proximaPergunta()">Próxima ▶</button>
+      </div>
+      <div class="pergunta-list" id="pergunta-list">
+        <!-- carregado via JS -->
+      </div>
+    </div>
+
+    <!-- Preview da pergunta atual -->
+    <div class="section-card" id="preview-card" style="display:none">
+      <h3>👁 Pergunta Sendo Exibida</h3>
+      <div id="preview-content"></div>
+    </div>
+
+    <!-- Participantes -->
+    <div class="section-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <h3 style="margin:0;">👥 Alunos Respondendo</h3>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="update-indicator" style="font-size:0.75rem;color:var(--muted);font-weight:600;"></span>
+          <button class="btn btn-outline btn-sm" onclick="atualizarDashboard()">↻ Atualizar</button>
+        </div>
+      </div>
+      <div id="participantes-list">
+        <p style="color:var(--muted);font-size:0.9rem;">Nenhum aluno conectado ainda.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: ALUNO LOGIN ===== -->
+<div class="screen" id="screen-aluno-login">
+  <div class="logo">🎓 Entrar no Quiz</div>
+  <div class="card">
+    <h2>Bem-vindo, aluno!</h2>
+    <div class="input-group">
+      <label>Seu Nome</label>
+      <input type="text" id="aluno-nome" placeholder="Como você se chama?" maxlength="40">
+    </div>
+    <div class="input-group">
+      <label>Código da Sessão</label>
+      <input type="text" id="aluno-codigo" placeholder="Ex: QUIZ2025" maxlength="10" style="text-transform:uppercase;letter-spacing:2px;font-size:1.1rem;">
+    </div>
+    <div id="aluno-error" class="error-msg"></div>
+    <button class="btn btn-secondary mt-16" onclick="entrarQuiz()">🚀 Entrar no Quiz</button>
+    <button class="btn btn-outline mt-8" onclick="showScreen('screen-home')">← Voltar</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: AGUARDANDO PROFESSOR ===== -->
+<div class="screen" id="screen-aguardando">
+  <div class="waiting">
+    <div class="waiting-anim">⏳</div>
+    <h2>Aguardando o professor</h2>
+    <p style="color:var(--muted);margin-top:8px;" id="waiting-nome"></p>
+    <p style="color:var(--muted);font-size:0.9rem;margin-top:16px;" class="connecting-dots">Conectando</p>
+  </div>
+</div>
+
+<!-- ===== SCREEN: QUIZ ALUNO ===== -->
+<div class="screen" id="screen-quiz">
+  <div class="quiz-container">
+    <div class="quiz-header">
+      <div style="font-weight:800;font-size:0.9rem;color:var(--muted);" id="quiz-pontos">⭐ 0 pts</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+      <div class="timer" id="timer">30</div>
+      <button onclick="toggleFullscreen()" title="Tela Cheia" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:4px;color:var(--muted);" id="btn-fs-quiz">⛶</button>
+    </div>
+
+    <div class="question-card">
+      <div class="question-num" id="question-num">Pergunta 1 de ?</div>
+      <div class="question-text" id="question-text">Carregando...</div>
+    </div>
+
+    <div class="options" id="options-container"></div>
+    <div id="feedback-container"></div>
+  </div>
+</div>
+
+<!-- ===== SCREEN: RESULTADO ALUNO ===== -->
+<div class="screen" id="screen-resultado">
+  <div class="result-card">
+    <div class="result-trophy" id="result-trophy">🏆</div>
+    <div class="result-score" id="result-score">0</div>
+    <div class="result-label" id="result-label">pontos</div>
+    <div id="result-stats" style="margin-bottom:24px;color:var(--muted);font-weight:600;"></div>
+    <button class="btn btn-primary" onclick="voltarInicio()">🏠 Voltar ao Início</button>
+  </div>
+</div>
+
+<!-- ===== SCREEN: RANKING ===== -->
+<div class="screen" id="screen-ranking">
+  <div class="quiz-container">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="font-size:2.5rem;">🏆</div>
+      <h2 style="font-size:1.6rem;font-weight:900;">Ranking</h2>
+    </div>
+    <div class="ranking-list" id="ranking-list"></div>
+    <button class="btn btn-outline mt-16" onclick="showScreen('screen-professor')">← Voltar</button>
+  </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE TELA CHEIA -->
+<button class="fullscreen-btn-float" onclick="toggleFullscreen()" id="btn-fs-float" title="Tela cheia">⛶</button>
+
+<script>
+// ========== CONFIGURAÇÕES ==========
+const API_BASE = 'https://superagent-ec768a92.base44.app/functions/gerenciarSessao';
+const PROF_SENHA = '2509';
+const POLL_INTERVAL = 3000;
+
+// ========== ESTADO ==========
+let state = {
+  sessao: null,
+  participante: null,
+  perguntas: [],
+  perguntaAtual: null,
+  perguntaIndex: 0,
+  pontos: 0,
+  respostasCorretas: 0,
+  totalRespondidas: 0,
+  timerInterval: null,
+  pollInterval: null,
+  tempoInicio: null,
+  respondeu: false
+};
+
+// ========== SONS ==========
+let audioCtxInstance = null;
+let sonsFoiAtivado = false;
+
+function ativarAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!audioCtxInstance) audioCtxInstance = new AC();
+    if (audioCtxInstance.state === 'suspended') audioCtxInstance.resume();
+    sonsFoiAtivado = true;
+  } catch(e) {}
+}
+
+// Ativar ao primeiro clique/toque em qualquer lugar
+document.addEventListener('click', () => { if (!sonsFoiAtivado) ativarAudio(); }, { once: false });
+document.addEventListener('touchstart', () => { if (!sonsFoiAtivado) ativarAudio(); }, { once: false });
+
+function getAC() {
+  ativarAudio();
+  return audioCtxInstance;
+}
+
+function tocarBeep(freqs, duracoes, volumes) {
+  try {
+    const ac = getAC();
+    if (!ac) return;
+    freqs.forEach((f, i) => {
+      const delay = duracoes.slice(0, i).reduce((a, b) => a + b, 0);
+      const dur = duracoes[i];
+      const vol = volumes[i] || 0.25;
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.frequency.value = f;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ac.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(vol, ac.currentTime + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + delay + dur);
+      osc.start(ac.currentTime + delay);
+      osc.stop(ac.currentTime + delay + dur + 0.05);
+    });
+  } catch(e) {}
+}
+
+function falarTexto(texto, volume) {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(texto);
+    utter.lang = 'pt-BR';
+    utter.rate = 1.1;
+    utter.pitch = 1.1;
+    utter.volume = volume || 1;
+    // Tentar usar voz em português
+    const vozes = window.speechSynthesis.getVoices();
+    const vozPT = vozes.find(v => v.lang.startsWith('pt')) || vozes[0];
+    if (vozPT) utter.voice = vozPT;
+    window.speechSynthesis.speak(utter);
+  } catch(e) {}
+}
+
+function playSound(type) {
+  try {
+    if (type === 'correct') {
+      tocarBeep([523, 659, 784, 1047], [0.12, 0.12, 0.12, 0.3], [0.2, 0.2, 0.2, 0.3]);
+      setTimeout(() => falarTexto('Correto!', 1), 200);
+    } else if (type === 'wrong') {
+      tocarBeep([350, 220], [0.2, 0.4], [0.25, 0.2]);
+      setTimeout(() => falarTexto('Errou!', 1), 150);
+    } else if (type === 'tick') {
+      tocarBeep([900], [0.08], [0.12]);
+    } else if (type === 'tick_urgent') {
+      tocarBeep([1100, 900], [0.07, 0.07], [0.2, 0.15]);
+    } else if (type === 'start') {
+      tocarBeep([523, 659, 784, 1047], [0.15, 0.15, 0.15, 0.3], [0.2, 0.2, 0.2, 0.3]);
+      setTimeout(() => falarTexto('Boa sorte!', 1), 400);
+    } else if (type === 'nova_pergunta') {
+      tocarBeep([440, 550], [0.1, 0.15], [0.15, 0.2]);
+      setTimeout(() => falarTexto('Nova pergunta!', 0.9), 100);
+    } else if (type === 'finish') {
+      tocarBeep([523, 659, 784, 659, 784, 1047], [0.12, 0.12, 0.12, 0.12, 0.12, 0.4], [0.2, 0.2, 0.2, 0.2, 0.2, 0.35]);
+      setTimeout(() => falarTexto('Parabéns, você concluiu o quiz!', 1), 500);
+    } else if (type === 'timeout') {
+      tocarBeep([400, 300, 220], [0.15, 0.15, 0.35], [0.2, 0.2, 0.2]);
+      setTimeout(() => falarTexto('Tempo esgotado!', 1), 100);
+    } else if (type === 'entrar') {
+      tocarBeep([660, 880], [0.12, 0.25], [0.2, 0.25]);
+      setTimeout(() => falarTexto('Bem-vindo ao quiz!', 1), 200);
+    }
+  } catch(e) {}
+}
+
+// ========== PARTICLES ==========
+function spawnParticles(x, y, emojis = ['⭐','✨','🎉','💫']) {
+  const container = document.getElementById('particles');
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.left = (x + (Math.random()-0.5)*100) + 'px';
+    p.style.top = y + 'px';
+    p.style.animationDelay = (Math.random()*0.3) + 's';
+    container.appendChild(p);
+    setTimeout(() => p.remove(), 2200);
+  }
+}
+
+// ========== STARS ==========
+function createStars() {
+  const container = document.getElementById('stars');
+  for (let i = 0; i < 30; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random()*100 + '%';
+    s.style.top = Math.random()*100 + '%';
+    s.style.animationDelay = Math.random()*3 + 's';
+    s.style.animationDuration = (2 + Math.random()*3) + 's';
+    container.appendChild(s);
+  }
+}
+
+// ========== NAVEGAÇÃO ==========
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ========== PROFESSOR ==========
+function goToProfessor() {
+  showScreen('screen-prof-login');
+  setTimeout(() => document.getElementById('prof-senha').focus(), 200);
+}
+
+function loginProfessor() {
+  const senha = document.getElementById('prof-senha').value;
+  const err = document.getElementById('prof-login-error');
+  if (senha === PROF_SENHA) {
+    err.textContent = '';
+    document.getElementById('prof-senha').value = '';
+    playSound('start');
+    showScreen('screen-professor');
+    carregarPerguntas();
+    startProfessorPoll();
+  } else {
+    err.textContent = '❌ Senha incorreta. Tente novamente.';
+    playSound('wrong');
+  }
+}
+
+async function carregarPerguntas() {
+  // Perguntas são exibidas na lista do professor
+  const list = document.getElementById('pergunta-list');
+  // Gerar lista simples de 1-100
+  list.innerHTML = '';
+  for (let i = 1; i <= 100; i++) {
+    const item = document.createElement('div');
+    item.className = 'pergunta-item';
+    item.id = 'pq-item-' + i;
+    item.innerHTML = `<div class="pergunta-num">${i}</div><div class="pergunta-text">Pergunta ${i}</div>`;
+    item.onclick = () => exibirPerguntaEspecifica(i);
+    list.appendChild(item);
+  }
+}
+
+function gerarCodigo() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function criarSessao() {
+  const codigo = gerarCodigo();
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'criar_sessao_direto',
+        nome: 'Sessão Quiz',
+        codigo_acesso: codigo
+      })
+    });
+    // Salvamos localmente pois a criação é feita via entity direto
+    state.sessao = { codigo_acesso: codigo, status: 'aguardando', pergunta_atual: 0, id: 'local_' + Date.now() };
+
+    // Criar via API base44 entities
+    const resp = await criarSessaoEntidade(codigo);
+    if (resp && resp.id) {
+      state.sessao = resp;
+    }
+
+    document.getElementById('sessao-codigo').textContent = codigo;
+    document.getElementById('sessao-panel').style.display = 'block';
+    document.getElementById('sessao-status-badge').textContent = '🟡 Aguardando início';
+    document.getElementById('sessao-status-badge').className = 'badge badge-warning';
+    playSound('start');
+    alert('Sessão criada! Código: ' + codigo + '\nCompartilhe este código com seus alunos.');
+  } catch(e) {
+    alert('Erro ao criar sessão: ' + e.message);
+  }
+}
+
+async function criarSessaoEntidade(codigo) {
+  try {
+    const r = await fetch('https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
+      body: JSON.stringify({
+        nome: 'Sessão Quiz',
+        codigo_acesso: codigo,
+        status: 'aguardando',
+        pergunta_atual: 0,
+        tempo_por_pergunta: 30
+      })
+    });
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function iniciarSessao() {
+  if (!state.sessao) return alert('Crie uma sessão primeiro!');
+  await atualizarSessao({ status: 'em_andamento' });
+  state.sessao.status = 'em_andamento';
+  document.getElementById('sessao-status-badge').textContent = '🟢 Em andamento';
+  document.getElementById('sessao-status-badge').className = 'badge badge-success';
+  document.getElementById('btn-iniciar').style.display = 'none';
+  document.getElementById('btn-pausar').style.display = 'inline-flex';
+  playSound('start');
+}
+
+async function pausarSessao() {
+  if (!state.sessao) return;
+  await atualizarSessao({ status: 'aguardando' });
+  state.sessao.status = 'aguardando';
+  document.getElementById('sessao-status-badge').textContent = '🟡 Pausado';
+  document.getElementById('sessao-status-badge').className = 'badge badge-warning';
+  document.getElementById('btn-iniciar').style.display = 'inline-flex';
+  document.getElementById('btn-pausar').style.display = 'none';
+}
+
+async function encerrarSessao() {
+  if (!confirm('Encerrar a sessão atual?')) return;
+  await atualizarSessao({ status: 'encerrada' });
+  state.sessao = null;
+  document.getElementById('sessao-panel').style.display = 'none';
+  document.getElementById('sessao-status-badge').textContent = 'Sem sessão ativa';
+  document.getElementById('sessao-status-badge').className = 'badge badge-warning';
+  document.getElementById('preview-card').style.display = 'none';
+}
+
+async function atualizarSessao(dados) {
+  if (!state.sessao || !state.sessao.id) return;
+  try {
+    await fetch(`https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz/${state.sessao.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
+      body: JSON.stringify(dados)
+    });
+  } catch(e) {}
+}
+
+async function exibirPerguntaNumero() {
+  const num = parseInt(document.getElementById('busca-pergunta').value);
+  if (!num || num < 1 || num > 100) return alert('Digite um número entre 1 e 100');
+  await exibirPerguntaEspecifica(num);
+}
+
+async function proximaPergunta() {
+  state.perguntaIndex = (state.perguntaIndex % 100) + 1;
+  await exibirPerguntaEspecifica(state.perguntaIndex);
+}
+
+async function exibirPerguntaEspecifica(numero) {
+  if (!state.sessao) return alert('Crie e inicie uma sessão primeiro!');
+
+  // Destacar na lista
+  document.querySelectorAll('.pergunta-item').forEach(el => el.classList.remove('selected'));
+  const item = document.getElementById('pq-item-' + numero);
+  if (item) {
+    item.classList.add('selected');
+    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // Buscar pergunta
+  try {
+    const resp = await fetch('https://superagent-ec768a92.base44.app/api/entities/Pergunta?numero=' + numero, {
+      headers: { 'x-service-role': 'true' }
+    });
+    const data = await resp.json();
+    const pergunta = Array.isArray(data) ? data.find(p => p.numero == numero) : data;
+
+    if (!pergunta) return alert('Pergunta não encontrada.');
+
+    state.perguntaAtual = pergunta;
+    state.perguntaIndex = numero;
+
+    // Atualizar sessão com pergunta atual
+    await atualizarSessao({ pergunta_atual: pergunta.id || numero });
+
+    // Preview
+    document.getElementById('preview-card').style.display = 'block';
+    document.getElementById('preview-content').innerHTML = `
+      <div style="font-weight:800;font-size:0.95rem;margin-bottom:8px;">Q${numero}. ${pergunta.enunciado}</div>
+      <div style="font-size:0.85rem;color:var(--muted);">
+        A: ${pergunta.opcao_a} | B: ${pergunta.opcao_b}<br>
+        C: ${pergunta.opcao_c} | D: ${pergunta.opcao_d}
+      </div>
+      <div style="margin-top:8px;color:var(--success);font-weight:800;">✅ Resposta: ${pergunta.resposta_correta}</div>
+    `;
+
+    playSound('tick');
+  } catch(e) {
+    alert('Erro ao carregar pergunta: ' + e.message);
+  }
+}
+
+async function verRanking() {
+  if (!state.sessao || !state.sessao.id) return alert('Nenhuma sessão ativa.');
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ranking', sessao_id: state.sessao.id })
+    });
+    const data = await res.json();
+    const list = document.getElementById('ranking-list');
+    list.innerHTML = '';
+    const medals = ['🥇','🥈','🥉'];
+    (data.ranking || []).forEach((p, i) => {
+      const item = document.createElement('div');
+      item.className = 'ranking-item';
+      item.innerHTML = `
+        <div class="ranking-pos">${medals[i] || (i+1)+'º'}</div>
+        <div class="ranking-name">${p.nome}</div>
+        <div class="ranking-score">${p.pontuacao || 0} pts</div>
+      `;
+      list.appendChild(item);
+    });
+    if (!data.ranking || data.ranking.length === 0) {
+      list.innerHTML = '<p style="color:var(--muted);text-align:center">Nenhum participante ainda.</p>';
+    }
+    showScreen('screen-ranking');
+  } catch(e) {
+    alert('Erro ao carregar ranking: ' + e.message);
+  }
+}
+
+function startProfessorPoll() {
+  if (state.pollInterval) clearInterval(state.pollInterval);
+  state.pollInterval = setInterval(atualizarDashboard, 3000);
+}
+
+async function atualizarDashboard() {
+  if (!state.sessao || !state.sessao.id) return;
+  try {
+    const resp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante?sessao_id=${state.sessao.id}`, {
+      headers: { 'x-service-role': 'true' }
+    });
+    const participantes = await resp.json();
+    const list = document.getElementById('participantes-list');
+    const ind = document.getElementById('update-indicator');
+    const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if (ind) ind.textContent = '⟳ ' + agora;
+
+    const arr = Array.isArray(participantes) ? participantes : [];
+    document.getElementById('stat-participantes').textContent = arr.length;
+
+    // Ordenar por pontuação
+    arr.sort((a, b) => (b.pontuacao || 0) - (a.pontuacao || 0));
+
+    if (arr.length > 0) {
+      const medalhas = ['🥇','🥈','🥉'];
+      list.innerHTML = `
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+            <thead>
+              <tr style="background:#F0F4FF;border-radius:10px;">
+                <th style="padding:10px 12px;text-align:left;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">#</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">Aluno</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">✅ Acertos</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">📝 Respondidas</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">% Acerto</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">⭐ Pontos</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:800;color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${arr.map((p, i) => {
+                const acertos = p.respostas_corretas || 0;
+                const total = p.total_respondidas || 0;
+                const pct = total > 0 ? Math.round((acertos / total) * 100) : 0;
+                const pctColor = pct >= 70 ? '#52B788' : pct >= 40 ? '#FFD166' : '#FF6B6B';
+                const barW = pct + '%';
+                return `<tr style="border-bottom:1px solid #F0F4FF;transition:background 0.2s;" onmouseover="this.style.background='#F8F9FF'" onmouseout="this.style.background='white'">
+                  <td style="padding:12px 12px;font-weight:800;color:var(--primary);">${medalhas[i] || (i+1)+'º'}</td>
+                  <td style="padding:12px 12px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:0.85rem;flex-shrink:0;">${p.nome.charAt(0).toUpperCase()}</div>
+                      <span style="font-weight:700;">${p.nome}</span>
+                    </div>
+                  </td>
+                  <td style="padding:12px 12px;text-align:center;font-weight:800;color:#52B788;font-size:1rem;">${acertos}</td>
+                  <td style="padding:12px 12px;text-align:center;font-weight:700;color:var(--muted);">${total}</td>
+                  <td style="padding:12px 12px;text-align:center;">
+                    <div style="display:flex;align-items:center;gap:6px;justify-content:center;">
+                      <div style="width:50px;height:7px;background:#E2E8F0;border-radius:10px;overflow:hidden;">
+                        <div style="width:${barW};height:100%;background:${pctColor};border-radius:10px;transition:width 0.5s;"></div>
+                      </div>
+                      <span style="font-weight:800;color:${pctColor};font-size:0.85rem;">${pct}%</span>
+                    </div>
+                  </td>
+                  <td style="padding:12px 12px;text-align:center;font-weight:900;color:var(--primary);font-size:1.05rem;">${p.pontuacao || 0}</td>
+                  <td style="padding:12px 12px;text-align:center;">
+                    <span style="padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;background:${p.status==='concluido'?'#D4EDDA':'#D1ECF1'};color:${p.status==='concluido'?'#155724':'#0C5460'};">
+                      ${p.status === 'concluido' ? '✅ Concluído' : '🟢 Ativo'}
+                    </span>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;font-size:0.8rem;color:var(--muted);font-weight:600;text-align:right;">
+          ${arr.length} aluno${arr.length !== 1 ? 's' : ''} • Atualiza a cada 3 segundos
+        </div>
+      `;
+    } else {
+      list.innerHTML = '<p style="color:var(--muted);font-size:0.9rem;text-align:center;padding:20px;">Nenhum aluno conectado ainda. Compartilhe o código com a turma!</p>';
+    }
+  } catch(e) { console.error('Erro dashboard:', e); }
+}
+
+// ========== ALUNO ==========
+async function entrarQuiz() {
+  const nome = document.getElementById('aluno-nome').value.trim();
+  const codigo = document.getElementById('aluno-codigo').value.trim().toUpperCase();
+  const err = document.getElementById('aluno-error');
+
+  if (!nome) return err.textContent = 'Digite seu nome!';
+  if (!codigo) return err.textContent = 'Digite o código da sessão!';
+  err.textContent = '';
+
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'entrar_sessao',
+        nome_participante: nome,
+        codigo_sessao: codigo
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      return err.textContent = '❌ ' + (data.error || 'Erro ao entrar.');
+    }
+
+    state.sessao = data.sessao;
+    state.participante = data.participante;
+    state.pontos = 0;
+    state.respostasCorretas = 0;
+    state.totalRespondidas = 0;
+
+    document.getElementById('waiting-nome').textContent = 'Olá, ' + nome + '! Você entrou na sessão.';
+    showScreen('screen-aguardando');
+    playSound('entrar');
+    startAlunoPoll();
+  } catch(e) {
+    err.textContent = 'Erro de conexão. Tente novamente.';
+  }
+}
+
+let ultimaPerguntaId = null;
+
+function startAlunoPoll() {
+  if (state.pollInterval) clearInterval(state.pollInterval);
+  state.pollInterval = setInterval(verificarSessaoAluno, 2000);
+}
+
+async function verificarSessaoAluno() {
+  if (!state.sessao || !state.sessao.id) return;
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'status_sessao', sessao_id: state.sessao.id })
+    });
+    const data = await res.json();
+    if (!data.ok) return;
+
+    const sessao = data.sessao;
+    state.sessao = sessao;
+
+    if (sessao.status === 'encerrada') {
+      clearInterval(state.pollInterval);
+      mostrarResultadoFinal();
+      return;
+    }
+
+    if (sessao.status === 'em_andamento' && sessao.pergunta_atual && sessao.pergunta_atual !== ultimaPerguntaId) {
+      ultimaPerguntaId = sessao.pergunta_atual;
+      await carregarPerguntaAluno(sessao.pergunta_atual);
+    }
+
+    if (sessao.status === 'em_andamento' && document.getElementById('screen-aguardando').classList.contains('active')) {
+      // Só muda de tela se tiver pergunta
+      if (sessao.pergunta_atual) {
+        await carregarPerguntaAluno(sessao.pergunta_atual);
+      }
+    }
+  } catch(e) {}
+}
+
+async function carregarPerguntaAluno(perguntaRef) {
+  try {
+    // perguntaRef pode ser ID ou número
+    const isNum = !isNaN(parseInt(perguntaRef));
+    const url = isNum
+      ? `https://superagent-ec768a92.base44.app/api/entities/Pergunta?numero=${perguntaRef}`
+      : `https://superagent-ec768a92.base44.app/api/entities/Pergunta/${perguntaRef}`;
+
+    const resp = await fetch(url, { headers: { 'x-service-role': 'true' } });
+    const data = await resp.json();
+    const pergunta = Array.isArray(data) ? data[0] : data;
+
+    if (!pergunta || !pergunta.id) return;
+
+    state.perguntaAtual = pergunta;
+    state.respondeu = false;
+    renderizarPergunta(pergunta);
+    showScreen('screen-quiz');
+    playSound('nova_pergunta');
+    iniciarTimer(30);
+  } catch(e) {}
+}
+
+function renderizarPergunta(p) {
+  document.getElementById('question-num').textContent = `Pergunta ${p.numero} de 100`;
+  document.getElementById('question-text').textContent = p.enunciado;
+  document.getElementById('quiz-pontos').textContent = `⭐ ${state.pontos} pts`;
+  document.getElementById('progress-fill').style.width = ((p.numero / 100) * 100) + '%';
+  document.getElementById('feedback-container').innerHTML = '';
+
+  const opts = ['A','B','C','D'];
+  const textos = [p.opcao_a, p.opcao_b, p.opcao_c, p.opcao_d];
+  const container = document.getElementById('options-container');
+  container.innerHTML = '';
+  opts.forEach((letra, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<div class="option-letter">${letra}</div><div>${textos[i]}</div>`;
+    btn.onclick = () => responderPergunta(letra, btn);
+    container.appendChild(btn);
+  });
+}
+
+function iniciarTimer(segundos) {
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  let tempo = segundos;
+  const timerEl = document.getElementById('timer');
+  timerEl.textContent = tempo;
+  timerEl.classList.remove('urgent');
+
+  state.tempoInicio = Date.now();
+  state.timerInterval = setInterval(() => {
+    tempo--;
+    timerEl.textContent = tempo;
+    if (tempo <= 5) {
+      timerEl.classList.add('urgent');
+      playSound('tick');
+    }
+    if (tempo <= 0) {
+      clearInterval(state.timerInterval);
+      if (!state.respondeu) {
+        // Tempo esgotado
+        mostrarFeedback(false, null, 'Tempo esgotado!');
+        playSound('timeout');
+      }
+    }
+  }, 1000);
+}
+
+async function responderPergunta(letra, btn) {
+  if (state.respondeu) return;
+  state.respondeu = true;
+  clearInterval(state.timerInterval);
+
+  const tempoResposta = Math.round((Date.now() - state.tempoInicio) / 1000);
+
+  // Desabilitar todos os botões
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'responder',
+        participante_id: state.participante.id,
+        sessao_id: state.sessao.id,
+        pergunta_id: state.perguntaAtual.id,
+        resposta: letra,
+        tempo_resposta: tempoResposta
+      })
+    });
+    const data = await res.json();
+
+    // Colorir opções
+    document.querySelectorAll('.option-btn').forEach(b => {
+      const l = b.querySelector('.option-letter').textContent;
+      if (l === data.resposta_correta) b.classList.add('correct');
+      else if (l === letra && !data.correta) b.classList.add('wrong');
+    });
+
+    if (data.correta) {
+      state.pontos += 10;
+      state.respostasCorretas++;
+      playSound('correct');
+      spawnParticles(window.innerWidth/2, window.innerHeight/2, ['⭐','✨','🎉','💫','🌟']);
+    } else {
+      playSound('wrong');
+    }
+    state.totalRespondidas++;
+    document.getElementById('quiz-pontos').textContent = `⭐ ${state.pontos} pts`;
+    mostrarFeedback(data.correta, data.resposta_correta, data.explicacao);
+  } catch(e) {
+    mostrarFeedback(false, null, 'Erro ao registrar resposta.');
+  }
+}
+
+function mostrarFeedback(correta, respostaCorreta, explicacao) {
+  const container = document.getElementById('feedback-container');
+  container.innerHTML = `
+    <div class="feedback-box ${correta ? 'feedback-correct' : 'feedback-wrong'}">
+      ${correta ? '✅ Correto! +10 pontos' : `❌ Errou! Resposta: ${respostaCorreta || '?'}`}
+      ${explicacao ? `<br><span style="font-weight:600;opacity:0.85">${explicacao}</span>` : ''}
+    </div>
+  `;
+}
+
+function mostrarResultadoFinal() {
+  clearInterval(state.pollInterval);
+  clearInterval(state.timerInterval);
+
+  const pct = state.totalRespondidas > 0 ? Math.round((state.respostasCorretas / state.totalRespondidas) * 100) : 0;
+  let trophy = pct >= 80 ? '🏆' : pct >= 50 ? '🥈' : '🎖';
+
+  document.getElementById('result-trophy').textContent = trophy;
+  document.getElementById('result-score').textContent = state.pontos;
+  document.getElementById('result-label').textContent = 'pontos totais';
+  document.getElementById('result-stats').innerHTML =
+    `✅ ${state.respostasCorretas} acertos de ${state.totalRespondidas} respondidas (${pct}%)`;
+
+  showScreen('screen-resultado');
+  playSound('finish');
+  setTimeout(() => {
+    spawnParticles(window.innerWidth/2, window.innerHeight/2, ['🏆','⭐','🎉','🌟','💫']);
+  }, 300);
+}
+
+function voltarInicio() {
+  state = { sessao: null, participante: null, perguntas: [], perguntaAtual: null,
+    perguntaIndex: 0, pontos: 0, respostasCorretas: 0, totalRespondidas: 0,
+    timerInterval: null, pollInterval: null, tempoInicio: null, respondeu: false };
+  showScreen('screen-home');
+}
+
+
+
+// ========== TELA CHEIA ==========
+function toggleFullscreen() {
+  const el = document.documentElement;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+  if (!isFs) {
+    if (el.requestFullscreen) el.requestFullscreen();
+    else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    else if (el.mozRequestFullScreen) el.mozRequestFullScreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+  }
+}
+
+function onFullscreenChange() {
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement;
+  const btnHeader = document.getElementById('btn-fullscreen');
+  if (btnHeader) btnHeader.textContent = isFs ? '⊠ Sair' : '⛶ Tela Cheia';
+  const btnFloat = document.getElementById('btn-fs-float');
+  if (btnFloat) { btnFloat.textContent = isFs ? '⊠' : '⛶'; btnFloat.title = isFs ? 'Sair da tela cheia' : 'Tela cheia'; }
+  const btnQuiz = document.getElementById('btn-fs-quiz');
+  if (btnQuiz) btnQuiz.textContent = isFs ? '⊠' : '⛶';
+}
+
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+document.addEventListener('mozfullscreenchange', onFullscreenChange);
+
+// ========== INIT ==========
+createStars();
+</script>
+</body>
+</html>
