@@ -697,11 +697,11 @@
     <h2>Bem-vindo, aluno!</h2>
     <div class="input-group">
       <label>Seu Nome</label>
-      <input type="text" id="aluno-nome" placeholder="Como você se chama?" maxlength="40">
+      <input type="text" id="aluno-nome" placeholder="Como você se chama?" maxlength="40" onkeydown="if(event.key==='Enter')entrarQuiz()">
     </div>
     <div class="input-group">
-      <label>Código da Sessão</label>
-      <input type="text" id="aluno-codigo" placeholder="Ex: QUIZ2025" maxlength="10" style="text-transform:uppercase;letter-spacing:2px;font-size:1.1rem;">
+      <label>Código de Acesso</label>
+      <input type="password" id="aluno-codigo" placeholder="••••" maxlength="10" style="letter-spacing:4px;font-size:1.2rem;text-align:center;" onkeydown="if(event.key==='Enter')entrarQuiz()">
     </div>
     <div id="aluno-error" class="error-msg"></div>
     <button class="btn btn-secondary mt-16" onclick="entrarQuiz()">🚀 Entrar no Quiz</button>
@@ -1223,42 +1223,73 @@ async function atualizarDashboard() {
 }
 
 // ========== ALUNO ==========
+const CODIGO_ALUNO = '0707';
+
 async function entrarQuiz() {
   const nome = document.getElementById('aluno-nome').value.trim();
-  const codigo = document.getElementById('aluno-codigo').value.trim().toUpperCase();
+  const codigo = document.getElementById('aluno-codigo').value.trim();
   const err = document.getElementById('aluno-error');
 
-  if (!nome) return err.textContent = 'Digite seu nome!';
-  if (!codigo) return err.textContent = 'Digite o código da sessão!';
+  if (!nome) return err.textContent = '⚠️ Digite seu nome!';
+  if (!codigo) return err.textContent = '⚠️ Digite o código de acesso!';
+  if (codigo !== CODIGO_ALUNO) return err.textContent = '❌ Código incorreto. Peça ao professor!';
   err.textContent = '';
 
   try {
-    const res = await fetch(API_BASE, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'entrar_sessao',
-        nome_participante: nome,
-        codigo_sessao: codigo
-      })
+    // Buscar sessão ativa (em_andamento ou aguardando)
+    const resp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/SessaoQuiz`, {
+      headers: { 'x-service-role': 'true' }
     });
-    const data = await res.json();
-    if (!res.ok || data.error) {
-      return err.textContent = '❌ ' + (data.error || 'Erro ao entrar.');
+    const sessoes = await resp.json();
+    const sessaoAtiva = Array.isArray(sessoes)
+      ? sessoes.find(s => s.status === 'em_andamento' || s.status === 'aguardando')
+      : null;
+
+    if (!sessaoAtiva) {
+      return err.textContent = '⏳ Nenhuma sessão ativa no momento. Aguarde o professor iniciar!';
     }
 
-    state.sessao = data.sessao;
-    state.participante = data.participante;
-    state.pontos = 0;
-    state.respostasCorretas = 0;
-    state.totalRespondidas = 0;
+    // Criar ou buscar participante
+    const partResp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante`, {
+      headers: { 'x-service-role': 'true' }
+    });
+    const participantes = await partResp.json();
+    const jaExiste = Array.isArray(participantes)
+      ? participantes.find(p => p.nome.toLowerCase() === nome.toLowerCase() && p.sessao_id === sessaoAtiva.id)
+      : null;
 
-    document.getElementById('waiting-nome').textContent = 'Olá, ' + nome + '! Você entrou na sessão.';
+    let participante = jaExiste;
+    if (!participante) {
+      const criarResp = await fetch(`https://superagent-ec768a92.base44.app/api/entities/Participante`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-service-role': 'true' },
+        body: JSON.stringify({
+          nome: nome,
+          sessao_id: sessaoAtiva.id,
+          codigo_sessao: sessaoAtiva.codigo_acesso || '0707',
+          pontuacao: 0,
+          respostas_corretas: 0,
+          total_respondidas: 0,
+          status: 'ativo'
+        })
+      });
+      participante = await criarResp.json();
+    }
+
+    state.sessao = sessaoAtiva;
+    state.participante = participante;
+    state.alunoNome = nome;
+    state.pontos = participante.pontuacao || 0;
+    state.respostasCorretas = participante.respostas_corretas || 0;
+    state.totalRespondidas = participante.total_respondidas || 0;
+
+    document.getElementById('waiting-nome').textContent = 'Olá, ' + nome + '! Aguardando o professor...';
     showScreen('screen-aguardando');
     playSound('entrar');
     startAlunoPoll();
   } catch(e) {
-    err.textContent = 'Erro de conexão. Tente novamente.';
+    console.error(e);
+    err.textContent = '❌ Erro de conexão. Tente novamente.';
   }
 }
 
